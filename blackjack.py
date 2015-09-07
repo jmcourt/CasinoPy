@@ -4,27 +4,27 @@ import random
 import os
 import platform
 
-def clear():
+def clear():                                                              # Fetch operating system for the sake of system commands
    system=platform.system().lower()
-   if system=='linux':
-      os.system('clear')
-   else:
+   if system=='windows':
       os.system('cls')
+   else:
+      os.system('clear')
       
 
-suits=[' of Hearts  ',' of Spades  ',' of Diamonds',' of Clubs   ']
-faces=[[str(i),i] for i in range(2,11)]
-faces+=[['Ace',1],['Jack',10],['Queen',10],['King',10]]
-aces=set(['Ace'+i for i in suits])
+suits=[' of Hearts  ',' of Spades  ',' of Diamonds',' of Clubs   ']       # Establish the suits
+faces=[[str(i),i] for i in range(2,11)]                                   # Establish numerical face values
+faces+=[['Ace',1],['Jack',10],['Queen',10],['King',10]]                   # Establish special face values
+aces=set(['Ace'+i for i in suits])                                        # Establish a set of all aces (for comparitors later)
 
-def header(turn):
+def header(turn):                                                         # The omnipresent header; this is to be printed whenever screen is cleared
    clear()
    print '-------------------------'
    print '-    BlackJack Game!    -'
    print '-------------------------'
    print ''
    if turn>0:
-      for i in range(turn-1):
+      for i in range(turn-1):                                             # Display the fate of previous players
          print 'Player '+str(i+1)+' stuck!'
          print ''
       print 'Player '+str(turn)+'\'s Turn!'
@@ -34,7 +34,7 @@ def header(turn):
       print ''
 
 def stall():
-   print 'Press [ENTER] to continue.'
+   print 'Press [ENTER] to continue.'                                     # Save me having to type this out a billion times
    raw_input('')
 
 def stall_c():
@@ -43,26 +43,26 @@ def stall_c():
 
 #----------------------------------------------------------
 
-class deck:
-   def shuffle(self):
+class deck:                                                               # Define deck
+   def shuffle(self):                                                     # Restock the deck
       self.number_of_cards=52
-      self.cards=[]
-      self.cvals=[]
+      self.cards=[]                                                       # Store the cards
+      self.cvals=[]                                                       # Store the value of each cards (why not use a dict?  I couldnt be bothered thats why)
 
       for i in range(52):
-         self.cards.append(faces[i%13][0]+suits[i/13])
+         self.cards.append(faces[i%13][0]+suits[i/13])                    # Definitely the most efficient way of getting all cards
          self.cvals.append(faces[i%13][1])
 
    def draw(self):
       pick=int(random.random()*self.number_of_cards)
-      card=self.cards.pop(pick)
-      value=self.cvals.pop(pick)
-      self.number_of_cards-=1
+      card=self.cards.pop(pick)                                           # Pop a random card
+      value=self.cvals.pop(pick)                                          # Pop its value as well
+      self.number_of_cards-=1                                             # Reduce total card number by 1
       return card, value    
 
 #----------------------------------------------------------
 
-class hand:
+class hand:                                                               # I got bored of commenting
    def __init__(self,deck):
       self.cards=[]
       self.points=0
