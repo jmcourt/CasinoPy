@@ -172,9 +172,10 @@ def header():
    print 'Turn: '+(turn+'  ('+turn_player+'\'s move)' if turn>0 else '')
    print ''
 
+   print '     a   b   c   d   e   f   g   h'
    for j in range(8):
       print '   +---+---+---+---+---+---+---+---+'
-      rstr='   |'
+      rstr=' '+str(j+1)+' |'
       for i in range(8):
          if board[i][j]==None:
             rstr+='   '
@@ -205,6 +206,8 @@ def header():
 
 header()
 
+pieces['b_q1'].move('e4')
 
+header()
 
 
