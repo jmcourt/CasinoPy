@@ -11,25 +11,27 @@ board=array([array([None]*8)]*8)
 
 #-----Set Global Variables------------------------------------------------
 
-turn=0
+turn=0                                                              # Setup turn
 turn_player=None
-taken_this_turn=None
+taken_this_turn=None                                                # No pieces have been taken in turn 0
 
-winner=None
+endzone={ 'w' : 0 , 'b' : 7 }                                       # Each colour's 'Pawn Endzone', or row in which it will get promoted
 
-b_directions=[(1,1),(1,-1),(-1,1),(-1,-1)]
-r_directions=[(1,0),(0,1),(-1,0),(0,-1)]
-n_directions=[(1,2),(2,1),(-1,2),(-2,1),(1,-2),(2,-1),(-1,-2),(-2,-1)]
+winner=None                                                         # Nobody starts off as a winner!
+
+b_directions=[(1,1),(1,-1),(-1,1),(-1,-1)]                              # Diagonal Directions (1-space bishop-like moves)
+r_directions=[(1,0),(0,1),(-1,0),(0,-1)]                                # Diagonal Directions (1-space bishop-like moves)
+n_directions=[(1,2),(2,1),(-1,2),(-2,1),(1,-2),(2,-1),(-1,-2),(-2,-1)]  # Knight-like moves
 
 #-----Basic Function Definitions------------------------------------------
 
-def square_to_cell(square):                                               # Convert user input to grid location
+def square_to_cell(square):                                          # Convert user input to grid location
    assert len(square)==2
    col,row=square[0],square[1]
    col=col.lower()
    row=int(row)-1
 
-   if col=='a':   col=0
+   if col=='a':   col=0                                              # Convert letter into column
    elif col=='b': col=1
    elif col=='c': col=2
    elif col=='d': col=3
@@ -37,8 +39,9 @@ def square_to_cell(square):                                               # Conv
    elif col=='f': col=5
    elif col=='g': col=6
    elif col=='h': col=7
+   else: col=8
 
-   assert row>=0
+   assert row>=0                                                     # Make sure cell is on board
    assert row<=7
    assert col>=0
    assert col<=7
@@ -46,14 +49,14 @@ def square_to_cell(square):                                               # Conv
    return col,row
 
 
-def clear():                                                              # Fetch operating system for the sake of system commands
+def clear():                                                         # Fetch operating system for the sake of system commands
    system=platform.system().lower()
    if system=='windows':
       os.system('cls')
    else:
       os.system('clear')
 
-def piece_to_text(pID):
+def piece_to_text(pID):                                              # Take piece ID and return its name in human language
    if pID=='k': return 'King'
    elif pID=='q': return 'Queen'
    elif pID=='r': return 'Rook'
@@ -62,18 +65,18 @@ def piece_to_text(pID):
    elif pID=='p': return 'Pawn'
    else: return 'None'
 
-def col_to_text(cID):
+def col_to_text(cID):                                                # Take colour ID and return its name in human language
    if cID=='w': return 'White'
    elif cID=='b': return 'Black'
    else: return 'None'
 
-def not_(player):
+def not_(player):                                                    # Return the player that wasnt input
    if player=='w': return 'b'
    else: return 'w'
 
 #-----Check Checkers------------------------------------------------------
 
-def check_check(colour):
+def check_check(colour):                                             # Check if 'colour' player is in check
 
    king_loc=pieces[colour+'_k'].col,pieces[colour+'_k'].row
    danger_squares=set([])
@@ -81,7 +84,7 @@ def check_check(colour):
       if (not pieces[ID].taken) and (pieces[ID].colour != colour):
          danger_squares=danger_squares | pieces[ID].get_legal()
 
-   ##########
+   ##########             # Uncomment this for diagnostics; shows a grid of 'danger_squares' each time check_check is called
 
    #for j in range(8):
    #   print '   +---+---+---+---+---+---+---+---+'
