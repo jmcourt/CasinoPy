@@ -22,6 +22,7 @@ winner=None                                                         # Nobody sta
 b_directions=[(1,1),(1,-1),(-1,1),(-1,-1)]                              # Diagonal Directions (1-space bishop-like moves)
 r_directions=[(1,0),(0,1),(-1,0),(0,-1)]                                # Diagonal Directions (1-space bishop-like moves)
 n_directions=[(1,2),(2,1),(-1,2),(-2,1),(1,-2),(2,-1),(-1,-2),(-2,-1)]  # Knight-like moves
+p_directions={ 'w' : -1 , 'b' : 1 }                                     # The direction pawns must move for each player
 
 #-----Basic Function Definitions------------------------------------------
 
@@ -171,7 +172,9 @@ class piece:
       self.ID=ID
       self.typ_val()
       self.colour=colour
+      self.moves=0
       self.last_moved=turn
+      self.special_move=False                                             # Was the move just performed a special move (castling or en passant)?
       board[self.col][self.row]=ID
 
    def typ_val(self):
@@ -182,12 +185,24 @@ class piece:
       return set([])
 
    def move(self,square):
-      board[self.col][self.row]=None
-      self.col,self.row=square_to_cell(square)
+
+      to_col,to_row=square_to_cell(square)
+      self.special_move=self.check_special(self.col,self.row,to_col,to_row) # Check if the this move was special
+
+      board[self.col][self.row]=None                                      # Blank the cell that formerly contained the piece
+
+      self.col=to_col
+      self.row=to_row
+
       if board[self.col][self.row]!=None:                                 # Take piece if on the square you're trying to move to
          pieces[board[self.col][self.row]].take()
+
       board[self.col][self.row]=self.ID
       self.last_moved=turn
+      self.moves+=1
+
+   def check_special(self,from_col,from_row,to_col,to_row):
+      return False
 
    def take(self):                                                        # What to do if this piece is taken
       self.taken=True
@@ -217,7 +232,71 @@ class pawn(piece):
 
    def get_legal(self):
       legal=[]
-      return set([(0,0)])
+
+      p_dir=p_directions[self.colour]
+
+      # Normal move (1 forwards)
+
+      t_col=self.col
+      t_row=self.row+p_dir
+
+      try:
+
+         assert t_col<=7
+         assert t_row<=7
+         assert t_col>=0
+         assert t_row>=0
+         assert board[t_col][t_row]==None
+         legal.append((t_col,t_row))
+
+      except:
+         pass
+
+      if t_col<=7 and t_row<=7 and t_col>=0 and t_row>=0 and board[t_col][t_row]==None:
+         legal.append((t_col,t_row))
+
+      # Double-Square Start Move
+
+         if self.last_moved==0:
+            t_row+=p_dir
+            if board[t_col][t_row]==None:
+               legal.append((t_col,t_row))
+
+      # Taking Normally
+
+      for shift in set([1,-1]):
+         t_col=self.col+shift
+         t_row=self.row+p_dir
+
+         if t_col>7: continue
+         if t_row>7: continue
+         if t_col<0: continue
+         if t_row<0: continue
+
+         if board[t_col][t_row]!=None:
+            if pieces[board[t_col][t_row]].colour!=self.colour:
+               legal.append((t_col,t_row))
+
+      # Taking en passant
+
+      for shift in set([1,-1]):
+         t_col=self.col+shift
+         t_row=self.row+p_dir
+
+         if t_row!=endzone[self.colour]-(2*p_dir): continue                  # Pawn-en-Passant can only ever occur two rows back from endzone
+         if t_col>7: continue
+         if t_col<0: continue
+
+         if board[t_col][t_row]!=None: continue                              # If something blocks end of move, abort
+         if board[t_col][self.row]==None: continue                           # If nothing to take en passant, abort
+         ID=board[t_col][self.row]                                           # Store ID for some brutal interrogation
+         if pieces[ID].colour==self.colour: continue                         # If you're tryingto en passant your own piece, abort
+         if pieces[ID].type!='p': continue                                   # If you're trying to passant something which isnt a pawn, abort
+         if pieces[ID].moves!=1:  continue                                   # If the piece has moved more than once, it isn't eligible for en passant
+         if pieces[ID].last_moved!=turn-1: continue                          # Unless piece was last moved during the previous turn, abort
+         legal.append((t_col,t_row))                                         # If the move got through all that crap, it's a lucky winner!
+
+      return set(legal)
 
 #---KNIGHT----------------------------------
 
@@ -416,7 +495,7 @@ def header():
    print ''
    print ' Score: White-'+'{:2}'.format(str(score['b']))+'    Black-'+str(score['w'])
    print ''
-   print ' Turn: '+'{:4}'.format(str(turn))+( '  ('+col_to_text(turn_player)+'\'s move)' if turn_player!=None else '' )
+   print ' Turn: '+'{:4}'.format(str((turn+1)/2))+( '  ('+col_to_text(turn_player)+'\'s move)' if turn_player!=None else '' )
    print ''
 
    print '     a   b   c   d   e   f   g   h'
@@ -516,6 +595,8 @@ def do_turn(colour):
          raw_input('')
          continue
 
+   # Check for and deal with special moves here
+
    header()
 
    print ' Moved',piece_to_text(pieces[selected].type),'to',move_end.upper()
@@ -561,6 +642,7 @@ while winner==None:
    winner=do_turn('w')
    if winner!=None:
       break
+   turn+=1
    winner=do_turn('b')
 
 turn_player=None
