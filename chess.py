@@ -659,11 +659,12 @@ def do_turn(colour):
       print ' Took',piece_to_text(taken_this_turn)+(' en Passant' if special_move=='en_passant' else '')+'!'
    print ''
 
-   # Check for promotion
+   #----------
 
    print ' [Enter to Continue]'
-
    raw_input('')
+
+   # Check for promotion
 
    if piece_this_turn=='p':
       if m_e_r==homerow[not_(colour)]:
@@ -675,7 +676,7 @@ def do_turn(colour):
                promo_piece='Queen'
                pieces[selected]=queen(m_e_c,m_e_r,colour,selected)
                break
-            elif promo_piece in ['rook','r']:
+            elif promo_piece in ['rook','r','castle','c']:
                promo_piece='Rook'
                pieces[selected]=rook(m_e_c,m_e_r,colour,selected)
                break
@@ -691,6 +692,8 @@ def do_turn(colour):
          print ' Pawn promoted to '+promo_piece+'!'
          print ' [Enter to Continue]'
          raw_input('')
+
+   # Check for enemy player check, checkmate, stalemate
 
    in_check=check_check(not_(colour))
    is_legal_move=can_move(not_(colour))
