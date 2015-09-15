@@ -16,7 +16,7 @@ turn_player=None
 taken_this_turn=None                                                # No pieces have been taken in turn 0
 piece_this_turn=None                                                # No piece type has been used in turn 0
 
-endzone={ 'w' : 0 , 'b' : 7 }                                       # Each colour's 'Pawn Endzone', or row in which it will get promoted
+homerow={ 'w' : 7 , 'b' : 0 }                                       # The starting row of each colour's king
 
 winner=None                                                         # Nobody starts off as a winner!
 
@@ -280,7 +280,7 @@ class pawn(piece):
          t_col=self.col+shift
          t_row=self.row+p_dir
 
-         if t_row!=endzone[self.colour]-(2*p_dir): continue                  # Pawn-en-Passant can only ever occur two rows back from endzone
+         if t_row!=homerow[not_(self.colour)]-(2*p_dir): continue            # Pawn-en-Passant can only ever occur two rows back from enemy's homerow
          if t_col>7: continue
          if t_col<0: continue
 
