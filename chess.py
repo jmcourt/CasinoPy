@@ -36,7 +36,11 @@ def on_board(col,row):                                               # Checks wh
 
 def square_to_cell(square):                                          # Convert user input to grid location
    assert len(square)==2
-   col,row=square[0],square[1]
+   try:
+      int(square[1])                                                 # See if the second character is a number.  If not, effectively flip input
+      col,row=square[0],square[1]
+   except:
+      row,col=square[0],square[1]
    col=col.lower()
    row=int(row)-1
 
@@ -48,7 +52,7 @@ def square_to_cell(square):                                          # Convert u
    elif col=='f': col=5
    elif col=='g': col=6
    elif col=='h': col=7
-   else: col=8
+   else: col=8                                                       # Pass this through as a failure if it couldnt resolve the cell
 
    assert on_board(col,row)
 
@@ -81,15 +85,14 @@ def not_(player):                                                    # Return th
 
 #-----Check Checkers------------------------------------------------------
 
-def check_check(colour):                                             # Check if 'colour' player is in check
+def cell_in_check(colour,cell):                                      # Check if an arbitrary cell (as a tuple) is threatened by the opponent
 
-   king_loc=pieces[colour+'_k'].col,pieces[colour+'_k'].row
    danger_squares=set([])
    for ID in pieces:
       if (not pieces[ID].taken) and (pieces[ID].colour != colour):
          danger_squares=danger_squares | pieces[ID].get_legal()
 
-   ##########             # Uncomment this for diagnostics; shows a grid of 'danger_squares' each time check_check is called
+   ##########             # Uncomment this for diagnostics; shows a grid of 'danger_squares' each time cell_in_check is called
 
    #for j in range(8):
    #   print '   +---+---+---+---+---+---+---+---+'
@@ -106,11 +109,15 @@ def check_check(colour):                                             # Check if 
 
    ##########
 
-   if king_loc in danger_squares:
+   if cell in danger_squares:
       return True
    else:
       return False
 
+def check_check(colour):                                             # Check if 'colour' player is in check
+
+   king_loc=pieces[colour+'_k'].col,pieces[colour+'_k'].row
+   return cell_in_check(colour,king_loc)
 
 def into_check(colour,f_col,f_row,t_col,t_row):
 
@@ -191,22 +198,18 @@ class piece:
    def move(self,square):
 
       to_col,to_row=square_to_cell(square)
-      self.special_move=self.check_special(self.col,self.row,to_col,to_row) # Check if the this move was special
 
       board[self.col][self.row]=None                                      # Blank the cell that formerly contained the piece
 
       self.col=to_col
       self.row=to_row
 
-      if board[self.col][self.row]!=None:                                 # Take piece if on the square you're trying to move to
+      if board[self.col][self.row]!=None:                                 # Take piece if its on the square you're trying to move to
          pieces[board[self.col][self.row]].take()
 
       board[self.col][self.row]=self.ID
       self.last_moved=turn
       self.moves+=1
-
-   def check_special(self,from_col,from_row,to_col,to_row):
-      return False
 
    def take(self):                                                        # What to do if this piece is taken
       self.taken=True
@@ -410,6 +413,9 @@ class king(piece):
 
    def get_legal(self):
       legal=[]
+
+      # Normal move (1 in any direction)
+
       for test in r_directions+b_directions:
          t_col=self.col+test[0]
          t_row=self.row+test[1]
@@ -422,6 +428,40 @@ class king(piece):
             else:
                legal.append((t_col,t_row))                                # Can take enemy piece though.  Either way ends the run
                continue
+
+      # Castle Kingside
+
+      try:
+         assert self.last_moved==0                                        # King must not have moved
+         castling_rook=self.col+'_r1'
+         h=homerow[self.colour]
+         assert not pieces[castling_rook].taken
+         assert pieces[castling_rook].last_moved==0                       # Rook must not have moved
+         assert not check_check(self.col)                                 # King must not already be in check
+         assert board[1][h]==None                                         # Intervening squares must be empty
+         assert board[2][h]==None
+         assert not cell_in_check(self.colour,(2,h))                      # King must not move through check
+         legal.append((1,h))
+      except:
+         pass 
+
+      # Castle Queenside
+
+      try:
+         assert self.last_moved==0                                        # King must not have moved
+         castling_rook=self.col+'_r2'
+         h=homerow[self.colour]
+         assert not pieces[castling_rook].taken
+         assert pieces[castling_rook].last_moved==0                       # Rook must not have moved
+         assert not check_check(self.col)                                 # King must not already be in check
+         assert board[4][h]==None                                         # Intervening squares must be empty
+         assert board[5][h]==None
+         assert board[6][h]==None
+         assert not cell_in_check(self.colour,(4,h))                      # King must not move through check
+         legal.append((5,h))
+      except:
+         pass 
+
       return set(legal)
 
 #-------------------------------------------
@@ -550,7 +590,7 @@ def do_turn(colour):
          raw_input('')
          continue
       if pieces[selected].colour!=colour:
-         print ' No',col_to_text(colour),'piece in cell! [Enter to Continue]'
+         print ' No',col_to_text(colour),'piece in Square! [Enter to Continue]'
          raw_input('')
          continue
       piece_this_turn=pieces[selected].type
@@ -572,6 +612,7 @@ def do_turn(colour):
       if into_check(colour,m_s_c,m_s_r,m_e_c,m_e_r):
          print ' Illegal move! [Enter to Continue]'
          raw_input('')
+         continue
       move_legal=pieces[selected].try_move(move_end)
 
       if move_legal:
@@ -591,9 +632,27 @@ def do_turn(colour):
 
    # Check for castling
 
+   if (m_s_c,m_s_r) == (3,homerow[colour]):
+      if (m_e_c,m_e_r) == (1,homerow[colour]):
+         special_move='castle_kingside'
+         castling_rook=colour+'_r1'                       # Work out which rook should move
+         rookmove='c'+str(homerow[colour]+1)              # Work out where the rook should go
+         pieces[castling_rook].move(rookmove)             # Hop the rook over the king
+         
+      if (m_e_c,m_e_r) == (5,homerow[colour]):
+         special_move='castle_queenside'
+         castling_rook=colour+'_r2'                       # Work out which rook should move
+         rookmove='e'+str(homerow[colour]+1)              # Work out where the rook should go
+         pieces[castling_rook].move(rookmove)             # Hop the rook over the king
+
    header()
 
-   print ' Moved',piece_to_text(piece_this_turn),'to',move_end.upper()
+   if special_move=='castle_kingside':
+      print 'Castled Kingside!'
+   elif special_move=='castle_queenside':
+      print 'Castled Queenside!'
+   else:
+      print ' Moved',piece_to_text(piece_this_turn),'to',move_end.upper()
    
    if taken_this_turn!=None:
       print ''
@@ -609,13 +668,16 @@ def do_turn(colour):
    in_check=check_check(not_(colour))
    is_legal_move=can_move(not_(colour))
 
+   print in_check,is_legal_move
+
    if is_legal_move and (not in_check):
       pass
    elif is_legal_move and in_check:
       header()
-      print colour_to_text(not_(colour)),'is in Check!'
+      print ' '+col_to_text(not_(colour)),'Player is in Check!'
       print ''
-      print '[Enter] to continue.'
+      print ' [Enter to Continue]'
+      raw_input('')
    elif (not is_legal_move) and in_check:
       return colour,'is in Checkmate!'
    else:
