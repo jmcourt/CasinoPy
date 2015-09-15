@@ -665,6 +665,33 @@ def do_turn(colour):
 
    raw_input('')
 
+   if piece_this_turn=='p':
+      if m_e_r==homerow[not_(colour)]:
+         while True:
+            header()
+            print ' Congratulations!  Pawn reached 8th Rank.'
+            promo_piece=raw_input('Choose Piece to Promote Pawn to: ').lower()
+            if promo_piece in ['queen','q']:
+               promo_piece='Queen'
+               pieces[selected]=queen(m_e_c,m_e_r,colour,selected)
+               break
+            elif promo_piece in ['rook','r']:
+               promo_piece='Rook'
+               pieces[selected]=rook(m_e_c,m_e_r,colour,selected)
+               break
+            elif promo_piece in ['bishop','b']:
+               promo_piece='Bishop'
+               pieces[selected]=bishop(m_e_c,m_e_r,colour,selected)
+               break
+            elif promo_piece in ['knight','k','n']:
+               promo_piece='Knight'
+               pieces[selected]=knight(m_e_c,m_e_r,colour,selected)
+               break
+         header()
+         print ' Pawn promoted to '+promo_piece+'!'
+         print ' [Enter to Continue]'
+         raw_input('')
+
    in_check=check_check(not_(colour))
    is_legal_move=can_move(not_(colour))
 
