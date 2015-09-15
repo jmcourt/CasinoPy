@@ -14,6 +14,7 @@ board=array([array([None]*8)]*8)
 turn=0                                                              # Setup turn
 turn_player=None
 taken_this_turn=None                                                # No pieces have been taken in turn 0
+piece_this_turn=None                                                # No piece type has been used in turn 0
 
 endzone={ 'w' : 0 , 'b' : 7 }                                       # Each colour's 'Pawn Endzone', or row in which it will get promoted
 
@@ -25,6 +26,13 @@ n_directions=[(1,2),(2,1),(-1,2),(-2,1),(1,-2),(2,-1),(-1,-2),(-2,-1)]  # Knight
 p_directions={ 'w' : -1 , 'b' : 1 }                                     # The direction pawns must move for each player
 
 #-----Basic Function Definitions------------------------------------------
+
+def on_board(col,row):                                               # Checks whether the coordinates fed to it correspond to a square on the board
+   if col>7: return False
+   if row>7: return False
+   if col<0: return False
+   if row<0: return False
+   return True
 
 def square_to_cell(square):                                          # Convert user input to grid location
    assert len(square)==2
@@ -42,13 +50,9 @@ def square_to_cell(square):                                          # Convert u
    elif col=='h': col=7
    else: col=8
 
-   assert row>=0                                                     # Make sure cell is on board
-   assert row<=7
-   assert col>=0
-   assert col<=7
+   assert on_board(col,row)
 
    return col,row
-
 
 def clear():                                                         # Fetch operating system for the sake of system commands
    system=platform.system().lower()
@@ -241,18 +245,14 @@ class pawn(piece):
       t_row=self.row+p_dir
 
       try:
-
-         assert t_col<=7
-         assert t_row<=7
-         assert t_col>=0
-         assert t_row>=0
+         assert on_board(t_col,t_row)
          assert board[t_col][t_row]==None
          legal.append((t_col,t_row))
 
       except:
          pass
 
-      if t_col<=7 and t_row<=7 and t_col>=0 and t_row>=0 and board[t_col][t_row]==None:
+      if on_board(t_col,t_row) and board[t_col][t_row]==None:
          legal.append((t_col,t_row))
 
       # Double-Square Start Move
@@ -268,10 +268,7 @@ class pawn(piece):
          t_col=self.col+shift
          t_row=self.row+p_dir
 
-         if t_col>7: continue
-         if t_row>7: continue
-         if t_col<0: continue
-         if t_row<0: continue
+         if not on_board(t_col,t_row): continue
 
          if board[t_col][t_row]!=None:
             if pieces[board[t_col][t_row]].colour!=self.colour:
@@ -310,10 +307,7 @@ class knight(piece):
       for test in n_directions:
          t_col=self.col+test[0]
          t_row=self.row+test[1]
-         if t_col>7: continue
-         if t_row>7: continue
-         if t_col<0: continue
-         if t_row<0: continue
+         if not on_board(t_col,t_row): continue
          if board[t_col][t_row]==None:
             legal.append((t_col,t_row))
          else:
@@ -338,10 +332,7 @@ class bishop(piece):
          while True:
             t_col=self.col+test[0]*steps
             t_row=self.row+test[1]*steps
-            if t_col>7: break
-            if t_row>7: break
-            if t_col<0: break
-            if t_row<0: break
+            if not on_board(t_col,t_row): break
             if board[t_col][t_row]!=None:
                if pieces[board[t_col][t_row]].colour==self.colour:           # If victim piece is player's colour, cant take it
                   break
@@ -369,10 +360,7 @@ class rook(piece):
          while True:
             t_col=self.col+test[0]*steps
             t_row=self.row+test[1]*steps
-            if t_col>7: break
-            if t_row>7: break
-            if t_col<0: break
-            if t_row<0: break
+            if not on_board(t_col,t_row): break
             if board[t_col][t_row]!=None:
                if pieces[board[t_col][t_row]].colour==self.colour:           # If victim piece is player's colour, cant take it
                   break
@@ -399,10 +387,7 @@ class queen(piece):
          while True:
             t_col=self.col+test[0]*steps
             t_row=self.row+test[1]*steps
-            if t_col>7: break
-            if t_row>7: break
-            if t_col<0: break
-            if t_row<0: break
+            if not on_board(t_col,t_row): break
             if board[t_col][t_row]!=None:
                if pieces[board[t_col][t_row]].colour==self.colour:           # If victim piece is player's colour, cant take it
                   break
@@ -428,10 +413,7 @@ class king(piece):
       for test in r_directions+b_directions:
          t_col=self.col+test[0]
          t_row=self.row+test[1]
-         if t_col>7: continue
-         if t_row>7: continue
-         if t_col<0: continue
-         if t_row<0: continue
+         if not on_board(t_col,t_row): continue
          if board[t_col][t_row]==None:
             legal.append((t_col,t_row))
          else:
@@ -539,9 +521,13 @@ def do_turn(colour):
 
    global turn_player
    global taken_this_turn
+   global piece_this_turn
 
    turn_player=colour
    taken_this_turn=None
+   piece_this_turn=None
+
+   special_move=None
 
    while True:
 
@@ -567,7 +553,8 @@ def do_turn(colour):
          print ' No',col_to_text(colour),'piece in cell! [Enter to Continue]'
          raw_input('')
          continue
-      print '',piece_to_text(pieces[selected].type),'in',move_start.upper(),'selected!'
+      piece_this_turn=pieces[selected].type
+      print '',piece_to_text(piece_this_turn),'in',move_start.upper(),'selected!'
       print ''
 
       #---Fetch Move Square-----------------------------
@@ -580,8 +567,8 @@ def do_turn(colour):
          print ' Invalid Square! [Enter to Continue]'
          raw_input('')
          continue
-      m_s_c,m_s_r=square_to_cell(move_start)
-      m_e_c,m_e_r=square_to_cell(move_end)
+      m_s_c,m_s_r=square_to_cell(move_start)               # Move Start Column, Move Start Row
+      m_e_c,m_e_r=square_to_cell(move_end)                 # Move End Column, Move End Row
       if into_check(colour,m_s_c,m_s_r,m_e_c,m_e_r):
          print ' Illegal move! [Enter to Continue]'
          raw_input('')
@@ -595,16 +582,26 @@ def do_turn(colour):
          raw_input('')
          continue
 
-   # Check for and deal with special moves here
+   # Check for en Passant
+
+   if piece_this_turn=='p' and taken_this_turn==None and (m_s_c-m_e_c)!=0:
+      pieces[board[m_e_c][m_s_r]].take()                  # Take the piece immediately behind the attacking pawn
+      board[m_e_c][m_s_r]=None                            # Have to blank the square manually as take() assumes the piece has been overwritten
+      special_move='en_passant'
+
+   # Check for castling
 
    header()
 
-   print ' Moved',piece_to_text(pieces[selected].type),'to',move_end.upper()
+   print ' Moved',piece_to_text(piece_this_turn),'to',move_end.upper()
    
    if taken_this_turn!=None:
       print ''
-      print ' Took',piece_to_text(taken_this_turn)+'!'
+      print ' Took',piece_to_text(taken_this_turn)+(' en Passant' if special_move=='en_passant' else '')+'!'
    print ''
+
+   # Check for promotion
+
    print ' [Enter to Continue]'
 
    raw_input('')
